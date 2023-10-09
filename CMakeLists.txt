@@ -10,7 +10,7 @@ if(${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR})
     message(SEND_ERROR "In-source building prohibited")
 endif()
 
-# Turn on automatic invocation of the MOC and UIC
+# Turn off automatic invocation of the MOC and UIC
 set(CMAKE_AUTOMOC OFF)
 set(CMAKE_AUTOUIC OFF)
 
@@ -23,7 +23,7 @@ endif()
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${PROJECT_SOURCE_DIR}/UI)
 
 # Find Qt5 libraries
-find_package(Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(Qt5 REQUIRED COMPONENTS Widgets Concurrent LinguistTools)
 
 # Create translation
 qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
@@ -40,15 +40,23 @@ set(GRAPH_SOURCES Headers/Cell.hxx
                   Sources/Graph_DFS.cxx
 )
 
-add_library(GraphStatic STATIC ${GRAPH_SOURCES})
+add_library(graph_static STATIC ${GRAPH_SOURCES})
 
 
 # Set project files
 set(PROJECT_SOURCES Sources/Main.cxx
                     Headers/MainWindow.hxx
                     Sources/MainWindow.cxx
-                    Headers/PathfindScene.hxx
-                    Sources/PathfindScene.cxx
+                    Headers/MatrixSceneInterface.hxx
+                    Headers/MatrixScene.hxx
+                    Sources/MatrixScene.cxx
+                    Headers/ZoomView.hxx
+                    Sources/ZoomView.cxx
+                    Headers/MatrixCell.hxx
+                    #Sources/MatrixCell.cxx
+                    Headers/CellsNumberValidator.hxx
+                    Headers/Settings.hxx
+                    Sources/Settings.cxx
 )
 
 # Set other files
@@ -56,30 +64,27 @@ set(TS_FILES pathfinding_test_assignment_ru_RU.ts)
 set(UI_FILES UI/MainWindow.ui)
 
 # Set target executable
-add_executable(pathfinding_test_assignment
+set(PROJECT_APP pathfinding_test_assignment)
+add_executable(${PROJECT_APP}
                ${PROJECT_SOURCES}
                ${TS_FILES}
                ${UI_FILES}
+               Headers/MatrixRectItem.h
 )
+set_target_properties(${PROJECT_APP} PROPERTIES
+                      AUTOMOC ON
+                      AUTOUIC ON
+)
+target_compile_definitions(${PROJECT_APP} PRIVATE KNOW_WHAT_TO_DO)
 
 # Set linked libraries
 target_link_libraries(pathfinding_test_assignment PRIVATE
                       Qt5::Widgets
-                      GraphStatic
+                      graph_static
 )
 
 ################################################################################
 #                                    Testing                                   #
 
 enable_testing()
-
-add_executable(dfs_nodes_test Tests/DFS_Nodes_Test.cxx)
-target_link_libraries(dfs_nodes_test PRIVATE GraphStatic)
-add_test(NAME dfs_create_remove_nodes
-         COMMAND $<TARGET_FILE:dfs_nodes_test>)
-
-add_executable(dfs_route_test Tests/RouteTest_DFS.cxx Tests/RouteTest.hxx)
-target_link_libraries(dfs_route_test PRIVATE GraphStatic)
-add_test(NAME dfs_trace_route COMMAND $<TARGET_FILE:dfs_route_test>)
-
-
+add_subdirectory(Tests)
