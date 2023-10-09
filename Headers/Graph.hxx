@@ -19,11 +19,13 @@ public:
     AbstractGraph() = default;
     AbstractGraph(const uint8_t &columns, const uint8_t &rows);
 
-    void remove(const Cell &node);
+    void add(const Cell &node);
+    void remove(const Cell &node) noexcept;
 
-    unsigned int nodesNumber() const;
-    unsigned int edgesNumber() const;
+    unsigned int nodesNumber() const noexcept;
+    unsigned int edgesNumber() const noexcept;
     bool isNeighbours(const Cell &a, const Cell &b) const noexcept;
+    bool isExists(const Cell &node) const noexcept;
 
     virtual TRoute findRoute(const Cell &start, const Cell &end) const = 0;
 

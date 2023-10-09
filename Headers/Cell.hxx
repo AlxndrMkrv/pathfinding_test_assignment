@@ -27,6 +27,9 @@ struct Cell
         return os;
     }
 
+    operator std::string() const {
+        return "(" + std::to_string(col) + ", " + std::to_string(row) + ")";
+    }
 
     /* Nested structs for unordered_* compability */
     struct Hash {
