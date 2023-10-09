@@ -47,7 +47,7 @@ add_library(graph_static STATIC ${GRAPH_SOURCES})
 set(PROJECT_SOURCES Sources/Main.cxx
                     Headers/MainWindow.hxx
                     Sources/MainWindow.cxx
-                    Headers/MatrixSceneInterface.hxx
+
                     Headers/MatrixScene.hxx
                     Sources/MatrixScene.cxx
                     Headers/ZoomView.hxx
@@ -69,7 +69,7 @@ add_executable(${PROJECT_APP}
                ${PROJECT_SOURCES}
                ${TS_FILES}
                ${UI_FILES}
-               Headers/MatrixRectItem.h
+               Headers/MatrixRectItem.hxx
 )
 set_target_properties(${PROJECT_APP} PROPERTIES
                       AUTOMOC ON

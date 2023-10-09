@@ -1,8 +1,9 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #include <QMainWindow>
-#include "PathfindScene.hxx"
+#include <QCloseEvent>
+#include <QShowEvent>
+#include <QPair>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -15,15 +16,21 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    QPair<uint, uint> matrixSize () const;
 
-    /* Base class methods implementation */
+public slots:
+    void onMatrixSizeChanged();
+
 protected:
-    //void activateWindow();
-    //virtual void resizeEvent(QResizeEvent *event) override;
-    //virtual bool event(QEvent *event) override;
+    virtual void showEvent(QShowEvent *event);
+
+protected slots:
+    void onGenerateButton();
+    virtual void closeEvent(QCloseEvent *event);
+
+private:
+    void redrawScene(const uint &cols, const uint &rows);
 
 private:
     Ui::MainWindow *ui;
-    PathfindScene _field;
 };
-#endif // MAINWINDOW_H
