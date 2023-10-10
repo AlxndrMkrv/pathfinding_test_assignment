@@ -13,6 +13,7 @@ endif()
 # Turn off automatic invocation of the MOC and UIC
 set(CMAKE_AUTOMOC OFF)
 set(CMAKE_AUTOUIC OFF)
+set(CMAKE_AUTORCC OFF)
 
 # Enable Windows platform
 if(WIN32)
@@ -25,15 +26,14 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS ${PROJECT_SOURCE_DIR}/UI)
 # Find Qt5 libraries
 find_package(Qt5 REQUIRED COMPONENTS Widgets Concurrent LinguistTools)
 
-# Create translation
-qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
-
-################################################################################
-#                                  Build setup                                 #
-
 # Include "Headers" directory
 include_directories(Headers)
 
+
+################################################################################
+#                             Graph static library                             #
+
+# Add Graph static library
 set(GRAPH_SOURCES Headers/Cell.hxx
                   Headers/Graph.hxx
                   Sources/Graph.cxx
@@ -43,48 +43,65 @@ set(GRAPH_SOURCES Headers/Cell.hxx
 add_library(graph_static STATIC ${GRAPH_SOURCES})
 
 
-# Set project files
-set(PROJECT_SOURCES Sources/Main.cxx
-                    Headers/MainWindow.hxx
-                    Sources/MainWindow.cxx
-
-                    Headers/MatrixScene.hxx
-                    Sources/MatrixScene.cxx
-                    Headers/ZoomView.hxx
-                    Sources/ZoomView.cxx
-                    Headers/MatrixCell.hxx
-                    #Sources/MatrixCell.cxx
-                    Headers/CellsNumberValidator.hxx
-                    Headers/Settings.hxx
-                    Sources/Settings.cxx
-)
-
-# Set other files
-set(TS_FILES pathfinding_test_assignment_ru_RU.ts)
-set(UI_FILES UI/MainWindow.ui)
-
-# Set target executable
-set(PROJECT_APP pathfinding_test_assignment)
-add_executable(${PROJECT_APP}
-               ${PROJECT_SOURCES}
-               ${TS_FILES}
-               ${UI_FILES}
-               Headers/MatrixRectItem.hxx
-)
-set_target_properties(${PROJECT_APP} PROPERTIES
-                      AUTOMOC ON
-                      AUTOUIC ON
-)
-target_compile_definitions(${PROJECT_APP} PRIVATE KNOW_WHAT_TO_DO)
-
-# Set linked libraries
-target_link_libraries(pathfinding_test_assignment PRIVATE
-                      Qt5::Widgets
-                      graph_static
-)
-
 ################################################################################
-#                                    Testing                                   #
+#                                 Graph tests                                  #
 
 enable_testing()
 add_subdirectory(Tests)
+
+
+################################################################################
+#                               GUI Application                                #
+
+# Set project files
+set(PROJECT_SOURCES Sources/Main.cxx
+                    Headers/Settings.hxx
+                    Sources/Settings.cxx
+                    Headers/MainWindow.hxx
+                    Sources/MainWindow.cxx
+                    Headers/ZoomView.hxx
+                    Sources/ZoomView.cxx
+                    Headers/MatrixScene.hxx
+                    Sources/MatrixScene.cxx
+                    Headers/MatrixRectItem.hxx
+                    Headers/MatrixCell.hxx
+                    Headers/CellsNumberValidator.hxx
+)
+
+# UI file
+set(UI_FILE UI/MainWindow.ui)
+
+# Create translation from given ts file and save it in build/i18n
+set(TS_FILE ${PROJECT_NAME}_ru_RU.ts)
+file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/i18n)
+set_source_files_properties(${TS_FILE} PROPERTIES OUTPUT_LOCATION i18n)
+qt5_create_translation(QM_FILE ${PROJECT_SOURCES} ${UI_FILE} ${TS_FILE})
+
+# Copy qrc file from source to build dir and add to project
+file(CREATE_LINK ${PROJECT_SOURCE_DIR}/${PROJECT_NAME}.qrc
+     ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.qrc SYMBOLIC
+)
+qt5_add_resources(RC_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.qrc)
+
+# Set target executable
+add_executable(${PROJECT_NAME}
+               ${PROJECT_SOURCES}
+               ${TS_FILE}
+               ${QM_FILE}
+               ${UI_FILE}
+               ${RC_FILE}
+)
+
+# Enable automoc & autouic for GUI only
+set_target_properties(${PROJECT_NAME} PROPERTIES
+                      AUTOMOC ON
+                      AUTOUIC ON
+                      AUTORCC ON
+)
+
+# Suppress the error in MatrixScene.hxx about a Graph size limitation
+target_compile_definitions(${PROJECT_NAME} PRIVATE KNOW_WHAT_TO_DO)
+
+# Set linked libraries
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets graph_static)
+
