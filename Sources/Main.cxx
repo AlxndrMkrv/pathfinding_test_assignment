@@ -2,13 +2,14 @@
 #include "Settings.hxx"
 
 #include <QApplication>
-#include <QScreen>
 #include <QLocale>
 #include <QTranslator>
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+
+    // Try to load i18n file
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages) {
@@ -20,8 +21,11 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Create main window and move to saved position
     MainWindow w;
     w.move(Settings().applicationPosition());
+
+    // Show window
     w.show();
     return app.exec();
 }
