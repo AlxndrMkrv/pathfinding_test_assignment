@@ -47,24 +47,17 @@ MainWindow::~MainWindow()
 
 QPair<uint, uint> MainWindow::matrixSize() const
 {
+    // Convert "W" LineEdit into integer
     bool colsSuccess;
     int cols = ui->widthLineEdit->text().toInt(&colsSuccess);
+    cols = colsSuccess ? cols : 0;
+
+    // Convert "H" LineEdit into integer
     bool rowsSuccess;
     int rows = ui->heightLineEdit->text().toInt(&rowsSuccess);
+    rows = rowsSuccess ? rows : 0;
 
-    // return matrix size if conversion succeed
-    if(colsSuccess && rowsSuccess &&
-        2 <= cols && cols <= 255 &&
-        2 <= rows && rows <= 255)
-        return qMakePair<uint, uint>(cols, rows);
-    // show error and return (0, 0) if conversion failed
-    else if (!colsSuccess || cols < 2 || 255 < cols)
-        QMessageBox::critical(nullptr, tr("Invalid matrix size"),
-                              tr("Invalid width cells number"));
-    else if (!rowsSuccess || rows < 2 || 255 < rows)
-        QMessageBox::critical(nullptr, tr("Invalid matrix size"),
-                              tr("Invalid height cells number"));
-    return qMakePair(0, 0);
+    return qMakePair(cols, rows);
 }
 
 void MainWindow::showEvent(QShowEvent *event)
@@ -86,8 +79,26 @@ void MainWindow::redrawScene(const uint &cols, const uint &rows)
 
 void MainWindow::onMatrixSizeChanged()
 {
+    // Read requested matrix size from W/H widgets
     auto cr = matrixSize();
-    redrawScene(cr.first, cr.second);
+
+    // Redraw scene if size is valid
+    if (2 <= cr.first && cr.first <= 255 &&
+        2 <= cr.second && cr.second <= 255)
+        redrawScene(cr.first, cr.second);
+
+    // Or...
+    else {
+        // Show error if columns number invalid
+        if (cr.first < 2 || 255 < cr.first)
+            QMessageBox::critical(nullptr, tr("Invalid matrix size"),
+                                  tr("Invalid width cells number"));
+
+        // Show error if rows number invalid
+        if (cr.second < 2 || 255 < cr.second)
+            QMessageBox::critical(nullptr, tr("Invalid matrix size"),
+                                  tr("Invalid height cells number"));
+    }
 }
 
 void MainWindow::onFailedToAddCell(const MatrixCell &cell)
