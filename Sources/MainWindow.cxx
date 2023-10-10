@@ -33,6 +33,11 @@ MainWindow::MainWindow(QWidget *parent)
     // Connect "Generate" button signal
     connect(ui->generateButton, SIGNAL(clicked(bool)),
             SLOT(onGenerateButton()));
+
+    // Connect error signal
+    connect(dynamic_cast<MatrixScene *>(ui->view->scene()),
+            SIGNAL(failedToAddCell(MatrixCell)),
+            SLOT(onFailedToAddCell(MatrixCell)));
 }
 
 MainWindow::~MainWindow()
@@ -75,13 +80,21 @@ void MainWindow::redrawScene(const uint &cols, const uint &rows)
     scene->redraw(cols, rows);
 
     // Fit Scene in View
-    ui->view->fitInView(scene->sceneRect(), Qt::KeepAspectRatio);
+    ui->view->fitInView(scene->sceneRect(),
+                        Qt::KeepAspectRatio);
 }
 
 void MainWindow::onMatrixSizeChanged()
 {
     auto cr = matrixSize();
     redrawScene(cr.first, cr.second);
+}
+
+void MainWindow::onFailedToAddCell(const MatrixCell &cell)
+{
+    QMessageBox::critical(nullptr, tr("Invalid cell to add"),
+                          tr("Cell %1 has no neighbours and can not be added")
+                              .arg(cell));
 }
 
 void MainWindow::onGenerateButton()

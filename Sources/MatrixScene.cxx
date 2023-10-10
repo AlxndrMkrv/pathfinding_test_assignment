@@ -326,8 +326,10 @@ void MatrixScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
                     _removeRoute();
                     _unblockCell(cell);
                 } catch (std::out_of_range &) {
+                    emit failedToAddCell(cell);
                     qDebug() << "Got out_of_range while adding " << cell
-                             << " to " << _columns << "x" << _rows << " matrix";
+                             << " to " << _columns << "x" << _rows
+                             << " matrix";
                 }
             }
         }

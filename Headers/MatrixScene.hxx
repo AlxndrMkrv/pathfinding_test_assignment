@@ -55,6 +55,8 @@ private:
     static MRoute CalculateRoute(const DFS &graph,
                                  const MCell &start, const MCell &end);
 
+signals:
+    void failedToAddCell(MatrixCell cell);
 
 public slots:
     void onRouteCalculated();

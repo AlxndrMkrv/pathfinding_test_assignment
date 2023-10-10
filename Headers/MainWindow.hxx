@@ -4,6 +4,8 @@
 #include <QCloseEvent>
 #include <QShowEvent>
 #include <QPair>
+#include "MatrixCell.hxx"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -20,6 +22,7 @@ public:
 
 public slots:
     void onMatrixSizeChanged();
+    void onFailedToAddCell(const MatrixCell &cell);
 
 protected:
     virtual void showEvent(QShowEvent *event);
