@@ -17,14 +17,20 @@ include_directories(Headers)
 include_directories(${CMAKE_SOURCE_DIR}/Headers)
 
 
-add_executable(dfs_nodes_test Sources/GraphTest_DFS.cxx Headers/GraphTest.hxx)
-target_link_libraries(dfs_nodes_test PRIVATE graph_static)
-add_test(NAME dfs_create_remove_nodes
-         COMMAND $<TARGET_FILE:dfs_nodes_test>)
+add_executable(graph_test Sources/GraphTest_DFS.cxx Headers/GraphTest.hxx)
+target_link_libraries(graph_test PRIVATE graph_static)
+add_test(NAME graph COMMAND $<TARGET_FILE:graph_test>)
 
-add_executable(dfs_route_test Sources/RouteTest_DFS.cxx Headers/RouteTest.hxx)
-target_link_libraries(dfs_route_test PRIVATE graph_static)
-add_test(NAME dfs_trace_route COMMAND $<TARGET_FILE:dfs_route_test>)
+add_executable(dfs_tracer_test Sources/TracerTest_DFS.cxx
+                               Headers/TracerTest.hxx
+)
+target_link_libraries(dfs_tracer_test PRIVATE graph_static)
+add_test(NAME dfs_tracer COMMAND $<TARGET_FILE:dfs_tracer_test>)
 
+add_executable(bfs_tracer_test Sources/TracerTest_BFS.cxx
+                               Headers/TracerTest.hxx
+)
+target_link_libraries(bfs_tracer_test PRIVATE graph_static)
+add_test(NAME bfs_tracer COMMAND $<TARGET_FILE:bfs_tracer_test>)
 
 

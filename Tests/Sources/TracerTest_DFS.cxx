@@ -1,13 +1,12 @@
-#include "RouteTest.hxx"
+#include "TracerTest.hxx"
 #include <algorithm>
 #include <vector>
 
 int main()
 {
-    std::vector<bool> results {routeTest_4_2_AB<DFS>(),
-                               routeTest_4_2_BA<DFS>(),
-                               routeTest_5_5<DFS>(),
-                               routeTest_7_5<DFS>()};
+    std::vector<bool> results{tracerTest_4_2_AB<DFS>(),
+                              tracerTest_4_2_BA<DFS>(), tracerTest_5_5<DFS>(),
+                              tracerTest_7_5<DFS>()};
 
     // set breakpoint here if something goes wrong
     if (std::all_of(results.begin(), results.end(),

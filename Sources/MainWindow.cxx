@@ -1,15 +1,15 @@
 #include <QMessageBox>
 #include <QRandomGenerator>
 
+#include "CellsNumberValidator.hxx"
 #include "MainWindow.hxx"
+#include "MatrixScene.hxx"
+#include "Settings.hxx"
 #include "UI/ui_MainWindow.h"
 #include "ZoomView.hxx"
-#include "MatrixScene.hxx"
-#include "CellsNumberValidator.hxx"
-#include "Settings.hxx"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget * parent) :
+    QMainWindow(parent), ui(new Ui::MainWindow)
 {
     // Initialize UI
     ui->setupUi(this);
@@ -18,7 +18,16 @@ MainWindow::MainWindow(QWidget *parent)
     move(Settings().applicationPosition());
 
     // Set scene
-    ui->view->setScene(new MatrixScene(ui->view));
+    MatrixScene * scene = new MatrixScene(ui->view);
+    ui->view->setScene(scene);
+
+    // Populate the tracer algorithms combo box
+    QStringList tracerNames;
+
+    for (const auto & name : scene->tracerNames())
+        tracerNames.append(QString::fromStdString(std::string(name)));
+
+    ui->tracerBox->addItems(tracerNames);
 
     // Set validators for "W"/"H" line edits
     ui->widthLineEdit->setValidator(new CellsNumberValidator(2, 255));
@@ -34,16 +43,17 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->generateButton, SIGNAL(clicked(bool)),
             SLOT(onGenerateButton()));
 
+    // Connect tracer checkbox signal
+    connect(ui->tracerBox, SIGNAL(currentIndexChanged(int)),
+            SLOT(onTracerChanged()));
+
     // Connect error signal
     connect(dynamic_cast<MatrixScene *>(ui->view->scene()),
             SIGNAL(failedToAddCell(MatrixCell)),
             SLOT(onFailedToAddCell(MatrixCell)));
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
+MainWindow::~MainWindow() { delete ui; }
 
 QPair<uint, uint> MainWindow::matrixSize() const
 {
@@ -60,21 +70,20 @@ QPair<uint, uint> MainWindow::matrixSize() const
     return qMakePair(cols, rows);
 }
 
-void MainWindow::showEvent(QShowEvent *event)
+void MainWindow::showEvent(QShowEvent * event)
 {
     QMainWindow::showEvent(event);
     onMatrixSizeChanged();
 }
 
-void MainWindow::redrawScene(const uint &cols, const uint &rows)
+void MainWindow::redrawScene(const uint & cols, const uint & rows)
 {
     // Call Scene redraw method
     MatrixScene * scene = dynamic_cast<MatrixScene *>(ui->view->scene());
     scene->redraw(cols, rows);
 
     // Fit Scene in View
-    ui->view->fitInView(scene->sceneRect(),
-                        Qt::KeepAspectRatio);
+    ui->view->fitInView(scene->sceneRect(), Qt::KeepAspectRatio);
 }
 
 void MainWindow::onMatrixSizeChanged()
@@ -83,8 +92,7 @@ void MainWindow::onMatrixSizeChanged()
     auto cr = matrixSize();
 
     // Redraw scene if size is valid
-    if (2 <= cr.first && cr.first <= 255 &&
-        2 <= cr.second && cr.second <= 255)
+    if (2 <= cr.first && cr.first <= 255 && 2 <= cr.second && cr.second <= 255)
         redrawScene(cr.first, cr.second);
 
     // Or...
@@ -101,11 +109,11 @@ void MainWindow::onMatrixSizeChanged()
     }
 }
 
-void MainWindow::onFailedToAddCell(const MatrixCell &cell)
+void MainWindow::onFailedToAddCell(const MatrixCell & cell)
 {
-    QMessageBox::critical(nullptr, tr("Invalid cell to add"),
-                          tr("Cell %1 has no neighbours and can not be added")
-                              .arg(cell));
+    QMessageBox::critical(
+        nullptr, tr("Invalid cell to add"),
+        tr("Cell %1 has no neighbours and can not be added").arg(cell));
 }
 
 void MainWindow::onGenerateButton()
@@ -123,7 +131,6 @@ void MainWindow::onGenerateButton()
     // Redraw the scene
     redrawScene(matrixSize, matrixSize);
 
-
     // Randomly pick cells to block and start/end points
     const uint totalCells = matrixSize * matrixSize;
     const double blockRate = static_cast<double>(random->bounded(5, 20)) / 100;
@@ -134,13 +141,15 @@ void MainWindow::onGenerateButton()
 
     // use set to store indices of cells to be changed
     QSet<uint> cellsToModify;
+
     // fill the set until required number of cells is reached
     while (cellsToModify.size() < cellsToPick)
         cellsToModify.insert(random->bounded(totalCells));
 
     // lambda to convert cell index to Pair<CR, CR> for the scene
-    auto num2point = [matrixSize](const uint &num){
-        return MCell(num / matrixSize, num % matrixSize); };
+    auto num2point = [matrixSize](const uint & num) {
+        return MCell(num / matrixSize, num % matrixSize);
+    };
 
     // change the picked cells on the scene
     uint blockCounter = 0;
@@ -161,7 +170,22 @@ void MainWindow::onGenerateButton()
     scene->startRouteCalculation();
 }
 
-void MainWindow::closeEvent(QCloseEvent *event)
+void MainWindow::onTracerChanged()
+{
+    // Get selected tracer algorithm
+    const QString selected = ui->tracerBox->currentText();
+
+    // Pass the selected tracer to the scene and retrace
+    MatrixScene * scene = dynamic_cast<MatrixScene *>(ui->view->scene());
+
+    if (selected.toStdString() == scene->tracer())
+        return;
+
+    scene->setTracer(selected.toStdString());
+    scene->startRouteCalculation();
+}
+
+void MainWindow::closeEvent(QCloseEvent * event)
 {
     Settings().storeApplicationPosition(pos());
 }

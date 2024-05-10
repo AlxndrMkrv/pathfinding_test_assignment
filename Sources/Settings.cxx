@@ -11,7 +11,7 @@ QPoint Settings::applicationPosition() const
     return QPoint(x, y);
 }
 
-void Settings::storeApplicationPosition(const QPoint &pos)
+void Settings::storeApplicationPosition(const QPoint & pos)
 {
     setValue("Application/x", pos.x());
     setValue("Application/y", pos.y());

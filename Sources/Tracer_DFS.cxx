@@ -1,23 +1,11 @@
 #include "Graph.hxx"
 
-TRoute DFS::findRoute(const Cell &start, const Cell &end) const
+TRoute DFS::calculateRoute(const Cell & start, const Cell & end) const
 {
-    // throw exception if start/end not in graph
-    if (! _edges.count(start))
-        throw std::out_of_range("Start cell is out of Graph");
-    if (! _edges.count(end))
-        throw std::out_of_range("End cell is out of Graph");
-
-    TRoute route {start};
-
-    // return if start is equal to end
-    if (start == end) {
-        route.shrink_to_fit();
-        return route;
-    }
-
     // prepare visited cells set
     TCellSet visited {start};
+
+    TRoute route{start};
 
     // reserve 3/4 of nodes number cells in route
     route.reserve(nodesNumber() * 3/4);

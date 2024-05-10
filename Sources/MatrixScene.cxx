@@ -3,23 +3,15 @@
 #include "Settings.hxx"
 #include <QDebug>
 #include <QGraphicsSceneEvent>
-#include <QRandomGenerator>
-#include <QPen>
-#include <QPainterPath>
 #include <QGraphicsView>
+#include <QPainterPath>
+#include <QPen>
+#include <QRandomGenerator>
 #include <QtConcurrent/QtConcurrent>
-#include <memory>
 
-/*QDebug& operator<<(QDebug& out, const Cell &cell)
-{
-    out << QString(std::string(cell).c_str());
-    return out;
-}*/
-
-MatrixScene::MatrixScene(QGraphicsView *parent)
-    : QGraphicsScene(parent), _columns(0), _rows(0),
-    _startCell(MCell::Invalid()), _endCell(MCell::Invalid()),
-    _startMark(QString("A")), _endMark(QString("B"))
+MatrixScene::MatrixScene(QGraphicsView * parent) :
+    QGraphicsScene(parent), _startCell(MCell::Invalid()),
+    _endCell(MCell::Invalid()), _startMark(QString("A")), _endMark(QString("B"))
 {
     // Read params from settings
     Settings s;
@@ -28,16 +20,23 @@ MatrixScene::MatrixScene(QGraphicsView *parent)
     markFont.setPixelSize(s.markSize());
 
     // Create route item
-    _routeItem.setPen(QPen(Qt::darkGreen));
+    _routeItem.setPen(QPen(_color(QPalette::Text)));
 
     // Create start/end marks
     _startMark.setFont(markFont);
     _endMark.setFont(markFont);
 
     connect(&_routeWatcher, SIGNAL(finished()), SLOT(onRouteCalculated()));
+
+    // Initialize tracers
+    std::shared_ptr<AbstractTracer> ptr = std::make_shared<DFS>(_graph.edges());
+    _tracers.insert(std::make_pair(ptr->name(), ptr));
+    ptr = std::make_shared<BFS>(_graph.edges());
+    _tracers.insert(std::make_pair(ptr->name(), ptr));
+    _tracer = _tracers.begin();
 }
 
-void MatrixScene::redraw(const uint &cols, const uint &rows)
+void MatrixScene::redraw(const uint & cols, const uint & rows)
 {
     // Stop route calculation if running
     if (_routeWatcher.isRunning())
@@ -56,8 +55,7 @@ void MatrixScene::redraw(const uint &cols, const uint &rows)
             // Add new cells to the scene
             if (c >= _columns || r >= _rows) {
                 addItem(new MatrixRectItem(c * _cellPixelSize,
-                                           r * _cellPixelSize,
-                                           _cellPixelSize,
+                                           r * _cellPixelSize, _cellPixelSize,
                                            _cellPixelSize));
             }
             // Remove extra cells from the scene
@@ -66,7 +64,7 @@ void MatrixScene::redraw(const uint &cols, const uint &rows)
             }
             // Unbrush others
             else {
-                rectAt(MCell(c, r))->setBrush(Qt::white);
+                rectAt(MCell(c, r))->setBrush(_color(QPalette::Base));
             }
         }
     }
@@ -79,84 +77,85 @@ void MatrixScene::redraw(const uint &cols, const uint &rows)
     _rows = rows;
 
     // Rebuild graph
-    _graph = DFS(_columns, _rows);
+    _graph.rebuild(_columns, _rows);
 }
 
-bool MatrixScene::isValid(const MCell &cell)
+bool MatrixScene::isValid(const MCell & cell)
 {
-    return 0 <= cell.col && cell.col < _columns &&
-           0 <= cell.row && cell.row < _rows && cell.isValid();
+    return 0 <= cell.col && cell.col < _columns && 0 <= cell.row &&
+           cell.row < _rows && cell.isValid();
 }
 
-void MatrixScene::setStartPoint(const MCell &cell)
+void MatrixScene::setStartPoint(const MCell & cell)
 {
     if (isValid(cell) && _graph.isExists(cell))
         _setStartPoint(cell);
 }
 
-void MatrixScene::setEndPoint(const MCell &cell)
+void MatrixScene::setEndPoint(const MCell & cell)
 {
     if (isValid(cell) && _graph.isExists(cell))
         _setEndPoint(cell);
 }
 
-void MatrixScene::setBlock(const MCell &cell)
+void MatrixScene::setBlock(const MCell & cell)
 {
     if (isValid(cell) && _graph.isExists(cell))
         _blockCell(cell);
 }
 
-MCell MatrixScene::mouse2matrix(const QPointF &pos) const
+MCell MatrixScene::mouse2matrix(const QPointF & pos) const
 {
     const int col = pos.x() / _cellPixelSize;
     const int row = pos.y() / _cellPixelSize;
     // Return valid MCell if position inside the scene matrix
-    if (0 <= col && col < _columns &&
-        0 <= row && row < _rows)
-        return MCell(static_cast<uint8_t>(col),
-                     static_cast<uint8_t>(row));
+    if (0 <= col && col < _columns && 0 <= row && row < _rows)
+        return MCell(static_cast<uint8_t>(col), static_cast<uint8_t>(row));
     // Return invalid MCell otherwise
     else
         return MCell::Invalid();
 }
 
-QPointF MatrixScene::matrix2mouse(const MCell &cell) const
+QPointF MatrixScene::matrix2mouse(const MCell & cell) const
 {
-    auto center = [&](const uint &n) {
-        return n * _cellPixelSize + static_cast<double>(_cellPixelSize)/2; };
+    auto center = [&](const uint & n) {
+        return n * _cellPixelSize + static_cast<double>(_cellPixelSize) / 2;
+    };
 
     return QPointF(center(cell.col), center(cell.row));
 }
 
-MatrixRectItem *MatrixScene::rectAt(const MCell &cell)
+MatrixRectItem * MatrixScene::rectAt(const MCell & cell)
 {
     // Find MatrixRectItem on the cell
-    for (auto &item : items(matrix2mouse(cell))) {
+    for (auto & item : items(matrix2mouse(cell))) {
         if (item->type() == MatrixRectItem::Type)
             return dynamic_cast<MatrixRectItem *>(item);
     }
+
     throw std::out_of_range("MatrixScene::rectAt() called outside the matrix");
 }
 
-void MatrixScene::placeMark(QGraphicsTextItem *mark, const MCell &cell)
+void MatrixScene::placeMark(QGraphicsTextItem * mark, const MCell & cell)
 {
     const QRectF rect = mark->boundingRect();
 
     // Mark must be placed in the center of the cell:
     // number of full cells + half of the cell - half of the item
-    auto calc = [&](const int &n, const double &w){
-        return n*_cellPixelSize + static_cast<double>(_cellPixelSize)/2 - w/2; };
+    auto calc = [&](const int & n, const double & w) {
+        return n * _cellPixelSize + static_cast<double>(_cellPixelSize) / 2 -
+               w / 2;
+    };
 
-    mark->setPos(calc(cell.col, rect.width()),
-                 calc(cell.row, rect.height()));
+    mark->setPos(calc(cell.col, rect.width()), calc(cell.row, rect.height()));
 }
 
-void MatrixScene::_redrawRoute(const MRoute &route)
+void MatrixScene::_redrawRoute(const MRoute & route)
 {
     // Skip empty route
     if (route.size() > 1) {
         // Create path object, set the first route point as start
-        QPainterPath path (matrix2mouse(route.front()));
+        QPainterPath path(matrix2mouse(route.front()));
 
         // Add lines to path iterating the route from the second cell
         auto itr = route.begin();
@@ -189,12 +188,33 @@ void MatrixScene::startRouteCalculation()
 
         // Run graph route calculation in a separate thread
         // and attach it to the watcher
-        _routeWatcher.setFuture(QtConcurrent::run(CalculateRoute, _graph,
-                                                  _startCell, _endCell));
+        _routeWatcher.setFuture(QtConcurrent::run(
+            CalculateRoute, _tracer->second, _startCell, _endCell));
     }
 }
 
-void MatrixScene::_setStartPoint(const MCell &cell)
+std::vector<std::string_view> MatrixScene::tracerNames() const
+{
+    std::vector<std::string_view> names;
+    std::transform(_tracers.begin(), _tracers.end(), std::back_inserter(names),
+                   [](const auto & pair) { return pair.first; });
+
+    return names;
+}
+
+std::string_view MatrixScene::tracer() const { return _tracer->second->name(); }
+
+void MatrixScene::setTracer(const std::string_view & name)
+{
+    const TracerMap::const_iterator itr = _tracers.find(name);
+
+    if (itr == _tracers.end())
+        throw std::runtime_error(std::format("unknown tracer name: {}", name));
+
+    _tracer = itr;
+}
+
+void MatrixScene::_setStartPoint(const MCell & cell)
 {
     // Set start cell
     _startCell = cell;
@@ -213,7 +233,7 @@ void MatrixScene::_removeStartPoint()
         removeItem(&_startMark);
 }
 
-void MatrixScene::_setEndPoint(const MCell &cell)
+void MatrixScene::_setEndPoint(const MCell & cell)
 {
     // Set end cell
     _endCell = cell;
@@ -232,25 +252,30 @@ void MatrixScene::_removeEndPoint()
         removeItem(&_endMark);
 }
 
-void MatrixScene::_blockCell(const MCell &cell)
+void MatrixScene::_blockCell(const MCell & cell)
 {
     _graph.remove(cell);
     rectAt(cell)->setBrush(Qt::black);
 }
 
-void MatrixScene::_unblockCell(const MCell &cell)
+void MatrixScene::_unblockCell(const MCell & cell)
 {
     _graph.add(cell);
-    rectAt(cell)->setBrush(Qt::white);
+    rectAt(cell)->setBrush(_color(QPalette::Base));
 }
 
-QVector<MCell> MatrixScene::CalculateRoute(const DFS &graph,
-                                           const MCell &start, const MCell &end)
+const QColor & MatrixScene::_color(QPalette::ColorRole cr) const
 {
-    QVector<MCell> route;
-    for (MCell cell : graph.findRoute(start, end))
-        route.push_back(cell);
-    return route;
+    return palette().color(cr);
+}
+
+QVector<MCell> MatrixScene::CalculateRoute(
+    const std::shared_ptr<AbstractTracer> & tracer, const MCell & start,
+    const MCell & end)
+{
+    const Route route = tracer->findRoute(start, end);
+
+    return QVector<MCell>(route.begin(), route.end());
 }
 
 void MatrixScene::onRouteCalculated()
@@ -259,19 +284,19 @@ void MatrixScene::onRouteCalculated()
     _redrawRoute(_routeWatcher.future().result());
 }
 
-void MatrixScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+void MatrixScene::mouseMoveEvent(QGraphicsSceneMouseEvent * event)
 {
     const MCell cell = mouse2matrix(event->scenePos());
 
     // Use mouse cursor as end cell if start cell set and end _mark_ not set
-    if (_startCell.isValid() && _endMark.scene() != this &&
-        cell.isValid() && _endCell != cell && _graph.isExists(cell)) {
+    if (_startCell.isValid() && _endMark.scene() != this && cell.isValid() &&
+        _endCell != cell && _graph.isExists(cell)) {
         _endCell = cell;
         startRouteCalculation();
     }
 }
 
-void MatrixScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
+void MatrixScene::mousePressEvent(QGraphicsSceneMouseEvent * event)
 {
     const MCell cell = mouse2matrix(event->scenePos());
 
@@ -298,8 +323,8 @@ void MatrixScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
             // Set the end point if not exists and start already set
             // note: _endCell may be set by moveEvent, so look at the mark
-            else if (_startCell.isValid() && (_endCell.isInvalid() ||
-                                              _endMark.scene() != this)) {
+            else if (_startCell.isValid() &&
+                     (_endCell.isInvalid() || _endMark.scene() != this)) {
                 _setEndPoint(cell);
             }
 
@@ -316,7 +341,7 @@ void MatrixScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
         else if (event->button() == Qt::MouseButton::RightButton &&
                  _startCell != cell && _endCell != cell) {
             // Remove existing cell and brush it on the scene
-            if(_graph.isExists(cell)) {
+            if (_graph.isExists(cell)) {
                 _removeRoute();
                 _blockCell(cell);
             }
@@ -325,11 +350,11 @@ void MatrixScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
                 try {
                     _removeRoute();
                     _unblockCell(cell);
-                } catch (std::out_of_range &) {
+                }
+                catch (std::out_of_range &) {
                     emit failedToAddCell(cell);
                     qDebug() << "Got out_of_range while adding " << cell
-                             << " to " << _columns << "x" << _rows
-                             << " matrix";
+                             << " to " << _columns << "x" << _rows << " matrix";
                 }
             }
         }

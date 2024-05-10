@@ -5,6 +5,9 @@ cmake_minimum_required(VERSION 3.5)
 
 project(pathfinding_test_assignment VERSION 1.0 LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Forbid in-source build
 if(${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR})
     message(SEND_ERROR "In-source building prohibited")
@@ -29,15 +32,20 @@ find_package(Qt5 REQUIRED COMPONENTS Widgets Concurrent LinguistTools)
 # Include "Headers" directory
 include_directories(Headers)
 
+# Include miscelarious files
+add_custom_target(misc SOURCES .clang-format debug_helpers.py)
+
 
 ################################################################################
 #                             Graph static library                             #
 
 # Add Graph static library
 set(GRAPH_SOURCES Headers/Cell.hxx
+    Headers/CellContainers.hxx
+                  Headers/Tracer.hxx
+                  Sources/Tracer.cxx
                   Headers/Graph.hxx
                   Sources/Graph.cxx
-                  Sources/Graph_DFS.cxx
 )
 
 add_library(graph_static STATIC ${GRAPH_SOURCES})

@@ -1,13 +1,10 @@
 #pragma once
 
 #include "Graph.hxx"
-#include <cinttypes>
 #include <algorithm>
+#include <cstdint>
 
-
-template<class TGraph>
-class TestingGraph : public TGraph
-{
+class TestingGraph : public Graph {
 public:
     static uint InitEdgesNumber(const uint &cols, const uint &rows) {
         return (cols-1)*2 * rows + (rows-1)*2 * cols;
@@ -16,11 +13,8 @@ public:
         return cols * rows;
     }
 
-    TestingGraph(const uint8_t &cols, const uint8_t &rows) :
-        TGraph(cols, rows)
+    TestingGraph(const uint8_t & cols, const uint8_t & rows) : Graph(cols, rows)
     {
-        static_assert(std::is_base_of<AbstractGraph, TGraph>::value,
-                      "Invalid Graph type given");
     }
 
     static bool TestTooFewNodes()
